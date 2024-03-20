@@ -5,56 +5,53 @@ import { checkImgURL } from '../../../utils/index';
 import { useRouter } from 'expo-router';
 import { useEffect, useState } from 'react';
 import { useSelector, useDispatch } from 'react-redux';
-import { getSpecies, resetDesc } from '../../../app/redux/fetchSlice';
+import { getPokemon, getSpecies, resetDesc } from '../../../app/redux/fetchSlice';
 
 const PokemonCard = ({ pokeId }) => {
   const router = useRouter();
   const dispatch = useDispatch();
-  const pokemon = useSelector(state => state.pokemons.data.find(p => p.id === pokeId))
-  const ddd = useSelector(state => state.pokemonDesc.data)
-  console.log("ddd: ",ddd);
-  const desc = useSelector(state => {
-    const obj = state?.pokemonDesc?.find(p => p.id === pokeId)
-    console.log("obj: ", obj);
-    return obj ? obj.desc.flavor_text_entries?.[2]?.flavor_text : null;
-  })
+  const pokemon = useSelector(state => state.pokemons.data[pokeId])
+  const error = useSelector(state => state.pokemons.error[pokeId])
+  const isLoading = useSelector(state => state.pokemons.isLoading[pokeId]);
+  const sortMode = useSelector(state => state.textConfig.sort);
 
-  const imgGif = pokemon.sprites?.other?.showdown.front_shiny;
-  const imgStatic = pokemon.sprites?.front_shiny;
-  const type = pokemon.types?.map(p => p.type.name)
+  const [desc, setDesc] = useState('');
+  const [isDescLoading, setIsDescLoading] = useState(false);
 
   useEffect(() => {
-    const getThePokemon = async () => {
-      try {
-        
-        console.log("dispacthced");
-      } catch (error) {
-        console.error("Internal error: ", error)
-      }
-    }
-    getThePokemon();
-  }, [pokemon])
+    pokeId && dispatch(getPokemon(pokeId))
+  }, [pokeId])
 
-  const number = () => {
-    let n = pokemon.id;
-    switch (true) {
-      case n < 10: return "000" + n.toString();
-      case n < 100: return "00" + n.toString();
-      case n < 1000: return "0" + n.toString();
-      case n >= 1000: return n.toString();
-      default: return "Missing Pokemon";
-    }
-  }
+  useEffect(() => {
+    const getDesc = () => {
+      const textList = pokemon?.species.flavor_text_entries || null;
+      if (!textList) return ''
+      const shuffledList = textList.slice().sort(() => Math.random() - 0.5);
+      const text = shuffledList ? shuffledList.find(t => t.language.name === "en") : '';
+      return text?.flavor_text;
+    };
+    setIsDescLoading(true);
+    setDesc(getDesc());
+    setIsDescLoading(false);
+  }, [pokemon, sortMode])
+
+  const name = pokemon?.info.name
+  const imgGif = pokemon?.info.sprites?.other?.showdown.front_shiny
+  const imgStatic = pokemon?.info.sprites?.front_shiny
+  const type = pokemon?.info.types?.map(p => p.type.name)
+
+
+
   return (
     <TouchableOpacity
       style={styles.container}
-      onPress={() => router.push(`/pokemon-details/${pokemon.id}`)}
+      onPress={() => router.push(`/pokemon-details/${pokeId}`)}
     >
-      {!isLoaded
+      {isLoading
         ? <ActivityIndicator size="small" color={COLORS.primary} />
         : error
           ? <View style={styles.textContainer}>
-            <Text style={styles.desc}>{error}</Text>
+            <Text style={styles.desc}>{err.message}</Text>
           </View>
           : (
             <>
@@ -72,10 +69,14 @@ const PokemonCard = ({ pokeId }) => {
               </TouchableOpacity>
 
               <View style={styles.textContainer}>
-                <Text style={styles.name} numberOfLines={1}>#{number()} {pokemon.name} </Text>
-                <Text style={styles.desc}>
-                  {desc ? desc : "We know nothing about\nthis Pokémon :("}
-                </Text>
+                <Text style={styles.name} numberOfLines={1}>#{number(pokeId)} {name} </Text>
+                {isDescLoading
+                  ? <ActivityIndicator size={15} color={COLORS.primary} />
+                  : <Text style={styles.desc}>
+                      {desc ? desc : "We know nothing about\nthis Pokémon :("}
+                    </Text>
+                }
+
               </View>
 
               <View style={styles.typeContainer}>
@@ -92,3 +93,17 @@ const PokemonCard = ({ pokeId }) => {
 }
 
 export default PokemonCard
+
+
+
+
+const number = (id) => {
+  let n = id;
+  switch (true) {
+    case n < 10: return "000" + n.toString();
+    case n < 100: return "00" + n.toString();
+    case n < 1000: return "0" + n.toString();
+    case n >= 1000: return n.toString();
+    default: return "Missing Pokemon";
+  }
+}

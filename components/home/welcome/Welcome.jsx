@@ -15,13 +15,12 @@ const filterPlaceholder = {
 
 const Welcome = () => {
   const [searchTerm, setSearchTerm] = useState('');
-  const [filterMode, setFilterMode] = useState({})
+  const [filterMode, setFilterMode] = useState({ Type: "", Generation: "", "Egg Group": "" })
   const [isModalVisible, setIsModalVisible] = useState(false);
 
   const dispatch = useDispatch();
   const sortMode = useSelector(state => state.textConfig?.sort);
-  //const activeFilter = useSelector(state => state.textConfig?.filter)
-
+  const activeFilter = useSelector(state => state.textConfig?.filter)
   return (
     <View>
       <View style={styles.container}>
@@ -87,19 +86,14 @@ const Welcome = () => {
                 <Text style={styles.filterTitle}>Search Pokémon by their</Text>
                 <TouchableOpacity onPress={() => {
                   setIsModalVisible(!isModalVisible)
-                  Object.keys(filterMode).length === 0
-                    ? dispatch(setFilter(null))
-                    : dispatch(setFilter(filterMode))
+                  dispatch(setFilter(filterMode))
                 }}>
                   <Text style={styles.filterClose}>Apply & Close</Text>
                 </TouchableOpacity>
               </View>
 
               <TouchableOpacity
-                onPress={() => {
-                  dispatch(setFilter(null))
-                  setFilterMode({})
-                }}
+                onPress={() => { setFilterMode({ Type: "", Generation: "", "Egg Group": "" }) }}
                 style={styles.filterOptionContainer}
               >
                 <Text style={styles.filterOption(filterMode)}>Clear filter</Text>
@@ -113,11 +107,7 @@ const Welcome = () => {
                     <TextInput
                       style={styles.searchInput}
                       value={filterMode[item]}
-                      onChangeText={(text) => {
-                        setFilterMode(text === ""
-                          ? (({ [item]: _, ...rest }) => rest)(filterMode)
-                          : { ...filterMode, [item]: text })
-                      }}//remove property if input is empty
+                      onChangeText={text => setFilterMode({ ...filterMode, [item]: text })}
                       placeholder={filterPlaceholder[item]}
                       placeholderTextColor={COLORS.gray}
                     ></TextInput>

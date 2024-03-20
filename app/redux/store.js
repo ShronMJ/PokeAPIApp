@@ -1,5 +1,5 @@
 import { configureStore } from "@reduxjs/toolkit";
-import {pokeIdReducer, pokemonReducer, pokemonDetailReducer} from "./fetchSlice";
+import {pokeIdReducer, pokemonReducer} from "./fetchSlice";
 import texConfigReducer from "./textSlice";
 
 
@@ -9,9 +9,7 @@ const store = configureStore({
     reducer: {
         pokeID: pokeIdReducer,
         pokemons: pokemonReducer,
-        pokemonDesc: pokemonDetailReducer,
-        texConfig: texConfigReducer
-
+        textConfig: texConfigReducer
     }
 
 });

@@ -59,10 +59,11 @@ const styles = StyleSheet.create({
     borderRadius: SIZES.medium,
     borderWidth: 1,
     borderColor: active === item ? COLORS.primary : COLORS.gray,
+    backgroundColor: active === item ? COLORS.gray2 : COLORS.lightWhite,
   }),
   tabText: (active, item) => ({
     fontFamily: FONT.medium,
-    color: active === item ? COLORS.secondary : COLORS.gray2,
+    color: active === item ? COLORS.primary : COLORS.gray,
   }),
 
   sortFilter: {

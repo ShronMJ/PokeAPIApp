@@ -5,64 +5,40 @@ import { COLORS } from '../../../constants';
 import PokemonCard from '../../common/cards/PokemonCard';
 import { useEffect, useState } from 'react';
 import { useDispatch, useSelector } from "react-redux";
-import { getPokemon, getPokeID, getSpecies } from '../../../app/redux/fetchSlice';
-import { sortPokemon } from '../../../app/redux/fetchSlice';
+import { getPokemon, getPokeID, getSpecies, resetPokemonList } from '../../../app/redux/fetchSlice';
+import { sortPokemon, resetIdList } from '../../../app/redux/fetchSlice';
 
 const PokemonList = () => {
   const dispatch = useDispatch();
-  const filterValue = useSelector(state => state.texConfig.filter)
-  const searchValue = useSelector(state => state.texConfig.search)
-  const sortValue = useSelector(state => state.texConfig?.sort)
-  const idList = useSelector(state => state.pokeID.data)
-  const pokemons = useSelector(state => state.pokemons.data)
-  const idError = useSelector(state => state.pokeID.error)
-  // console.log("filterValue: ", filterValue)
-  // //console.log("searchValue: ", searchValue)
-  // console.log("sortValue: ", sortValue)
-  //console.log("pokemons: ", pokemons)
-  // console.log("idList: ", idList)
+  const { filter: filterValue, search: searchValue, sort: sortMode } = useSelector(state => state.textConfig)
+  const { data: idList, error: idError } = useSelector(state => state.pokeID)
+  const pokemons = useSelector(state => state.pokemons.data);
+
   useEffect(() => {
-
-
-    const fetchPokemonList = async () => {
+    const fetchIdList = async () => {
       try {
-        filterValue.Type &&
-          dispatch(getPokeID({ filter: "type", value: filterValue.Type }));
-        filterValue.Generation &&
-          dispatch(getPokeID({ filter: "generation", value: filterValue.Generation }));
-        filterValue["Egg Group"] &&
-          dispatch(getPokeID({ filter: "egg-group", value: filterValue["Egg Group"] }));
-        searchValue &&
-          dispatch(getPokeID({ filter: "pokemon", value: searchValue }));
+        dispatch(resetIdList())
+        dispatch(resetPokemonList());
 
-        !filterValue.Type && !filterValue.Generation && !filterValue["Egg Group"] && !searchValue
-          && dispatch(getPokeID({ filter: "pokemon" }))
+        filterValue?.Type && dispatch(getPokeID({ filter: "type", value: filterValue.Type }));
+        filterValue?.Generation && dispatch(getPokeID({ filter: "generation", value: filterValue.Generation }));
+        filterValue?.["Egg Group"] && dispatch(getPokeID({ filter: "egg-group", value: filterValue["Egg Group"] }));
+        searchValue && dispatch(getPokeID({ filter: "pokemon", value: searchValue }));
 
-
-      } catch (error) {
-        console.error("Internal error: ", error)
-      }
+        !filterValue?.Type && !filterValue?.Generation && !filterValue?.["Egg Group"] && !searchValue && dispatch(getPokeID({ filter: "pokemon" }))
+      } catch (error) { console.error("Internal error: ", error) }
     };
-    fetchPokemonList();
-  }, [searchValue, filterValue.Type, filterValue.Generation, filterValue["Egg Group"]]);
+    fetchIdList();
+  }, [searchValue, filterValue?.Type, filterValue?.Generation, filterValue?.["Egg Group"]]);
 
   useEffect(() => {
-    if (idList) {
-      dispatch(getPokemon(idList)); // Fetch Pokémon data
-    }
-  }, [idList]);
+    if (Object.keys(pokemons).length === 0) return;
+    const sortValue = Object.keys(pokemons).map(key => {
+      return { id: key, name: pokemons[key].info.name, weight: pokemons[key].info.weight 
+      }})
+    dispatch(sortPokemon({ sortMode, sortValue}))
+  }, [sortMode])
 
-  useEffect(() => {
-    console.log("pokemon speci: ", pokemons);
-    if (pokemons.length > 0) {
-      const id_url = pokemons.map(p => ({ id: p.id, url: p.species.url }));
-      dispatch(getSpecies(id_url)); // Fetch species data
-    }
-  }, [pokemons]);
-
-  // useEffect(() => {
-  //   dispatch(sortPokemon(sortValue))
-  // }, [sortValue])
 
   return (
     <View style={styles.container}>
@@ -89,10 +65,10 @@ const PokemonList = () => {
       <View style={styles.cardsContainer}>
         {useSelector(s => s.pokeID.isLoading)
           ? <ActivityIndicator size="large" color={COLORS.primary} />
-          : pokemons?.map((p) => (
+          : idList?.map((p) => (
             <PokemonCard
-              pokeId={p?.id}
-              key={`poke-${p?.id}`}
+              pokeId={p}
+              key={`poke-${p}`}
             ></PokemonCard>
           ))
         }
@@ -101,3 +77,4 @@ const PokemonList = () => {
   )
 }
 export default PokemonList
+
