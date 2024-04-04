@@ -20,7 +20,6 @@ const Welcome = () => {
 
   const dispatch = useDispatch();
   const sortMode = useSelector(state => state.textConfig?.sort);
-  const activeFilter = useSelector(state => state.textConfig?.filter)
   return (
     <View>
       <View style={styles.container}>
@@ -34,7 +33,7 @@ const Welcome = () => {
             style={styles.searchInput}
             value={searchTerm}
             onChangeText={(text) => { setSearchTerm(text) }}
-            placeholder={"Type the Pokémon's name"}
+            placeholder={"Type the Pokémon's name/number, or use filter search"}
             placeholderTextColor={COLORS.gray}
             onSubmitEditing={() => { dispatch(setSearch(searchTerm)) }}
           />
@@ -45,22 +44,28 @@ const Welcome = () => {
             source={icons.search}
             resizeMode='contain'
             style={styles.searchBtnImage}
-          ></Image>
+          />
         </TouchableOpacity>
       </View>
 
       {/**The sort function----------------------------------------------------------------------------------*/}
       <View style={styles.sortFilter}>
-        <Text style={[styles.filterTitle, { paddingRight: SIZES.xSmall }]}>Sort by (Ascending): </Text>
+        <Text style={[styles.filterTitle, { paddingRight: SIZES.xSmall }]}>Sort by </Text>
+        <TouchableOpacity style={{ width: SIZES.xxLarge * 3 }}
+          onPress={() => dispatch(setSort({ ...sortMode, isAscending: !sortMode.isAscending }))}>
+          <Text style={[styles.filterTitle, { fontSize: sortMode.isAscending ? 10 : 16 }]}>Ascending</Text>
+          <Text style={[styles.filterTitle, { fontSize: sortMode.isAscending ? 16 : 10 }]}>Descending</Text>
+        </TouchableOpacity>
+        <Text style={[styles.filterTitle, { paddingRight: SIZES.xSmall }]}>: </Text>
 
         <FlatList
           data={SortBy}
           renderItem={({ item }) => (
             <TouchableOpacity
-              style={styles.tab(sortMode, item)}
-              onPress={() => { dispatch(setSort(item)); }}
+              style={styles.tab(sortMode.mode, item)}
+              onPress={() => dispatch(setSort({ ...sortMode, mode: item }))}
             >
-              <Text style={styles.tabText(sortMode, item)}>{item}</Text>
+              <Text style={styles.tabText(sortMode.mode, item)}>{item}</Text>
             </TouchableOpacity>
           )}
           keyExtractor={item => item}

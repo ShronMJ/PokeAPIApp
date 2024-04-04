@@ -1,7 +1,6 @@
 import { createSlice, createAsyncThunk } from '@reduxjs/toolkit'
 
-export const getPokeID = createAsyncThunk('idList/getPokeID', async ({ filter, value }) => {
-    if (!value) value = '';
+export const getPokeID = createAsyncThunk('idList/getPokeID', async ({ filter, value }, thunkAPI) => {
     const response = await fetch(`https://pokeapi.co/api/v2/${filter}/${value}`);
     const resData = await response.json();
     const urlList = (() => {
@@ -9,71 +8,74 @@ export const getPokeID = createAsyncThunk('idList/getPokeID', async ({ filter, v
             case "type":
                 return resData?.pokemon?.map(p => p.pokemon.url) || [];
             case "pokemon":
-                if(!value) return resData?.results?.map(p => p.url) || [];
-                
+                if (!value) return resData?.results?.map(p => p.url) || [];
                 else return resData?.id || [];
             default:
                 return resData?.pokemon_species?.map(p => p.url) || [];
         }
     })();
 
-    if(typeof urlList === 'number') return { idList: [urlList], filter };
+    if (!Array.isArray(urlList)) {
+        await thunkAPI.dispatch(getPokemon(urlList))
+        return [urlList];
+    } else {
+        const newIdList = urlList.map(url => {
+            const parts = url?.split('/');
+            return Number(parts[parts?.length - 2])
+        });
 
-    const idList = urlList.map(url => {
-        const parts = url?.split('/');
-        return parts[parts?.length - 2]
-    });
-    return { idList, filter };
+        const currentIdlist = thunkAPI.getState().pokeID.fetchData;
+        const idList = currentIdlist.length > 0 ? currentIdlist.filter(id => newIdList.includes(id)) : newIdList;
+        idList.forEach(async id => {
+            await thunkAPI.dispatch(getPokemon(id))
+        });
+        return idList;
+    }
 })
 
-export const getPokemon = createAsyncThunk('pokemon/getPokemon', async (id) => {
+export const getPokemon = createAsyncThunk('pokemon/getPokemon', async (pokeId, thunkAPI) => {
+    const existingPokemon = thunkAPI.getState().pokemons.data;
+    const currentIdlist = thunkAPI.getState().pokeID.fetchData;
+    if (existingPokemon.some(p => p.id === pokeId) || currentIdlist.includes(pokeId)) return;
 
-    const res1 = await fetch(`https://pokeapi.co/api/v2/pokemon/${id}`);
+    const res1 = await fetch(`https://pokeapi.co/api/v2/pokemon/${pokeId}`);
     const info = await res1.json();
 
     const res2 = await fetch(info.species.url);
     const species = await res2.json();
 
-    const pokemon = { info, species };
-    return pokemon;
+    const {id, name, weight, height} = info;
+    const imgGif = info.sprites.other.showdown.front_shiny;
+    const imgStatic = info.sprites.front_shiny;
+    const imgArt = info.sprites.other['official-artwork'].front_shiny;
+    const type = info.types.map(p => p.type.name);
+    const abilities = info.abilities?.map(a => a.ability.name);
 
+    const textList = species.flavor_text_entries || [];
+    const shuffledList = textList.slice().sort(() => Math.random() - 0.5);
+    const text = shuffledList ? shuffledList.find(t => t.language.name === "en") : '';
+    const desc = text.flavor_text;
+    return pokemon = { id, name, imgGif, imgStatic, imgArt, type, desc, weight, abilities, height };
 });
-
-
 
 const pokemonSlice = createSlice({
     name: 'pokemon',
     initialState: {
-        isLoading: {},
-        data: {},
-        error: {}
-    },
-    reducers: {
-        resetPokemonList: (state) => {
-            state.error = {};
-            state.data = {};
-            state.isLoading = {};
-        },
-
+        data: [],
+        error: []
     },
     extraReducers: (builder) => {
-        builder.addCase(getPokemon.pending, (state, action) => {
-            const id = action.meta.arg;
-            state.isLoading[id] = true;
-            state.error[id] = null
-        })
-        builder.addCase(getPokemon.fulfilled, (state, action) => {
-            const id = action.meta.arg;
-            state.data[id] = action.payload;
-            state.error[id] = null;
-            state.isLoading[id] = false;
-        });
+        builder
+            .addCase(getPokemon.fulfilled, (state, action) => {
+                const id = action.meta.arg;
 
-        builder.addCase(getPokemon.rejected, (state, action) => {
-            const id = action.meta.arg;
-            state.error[id] = action.error;
-            state.isLoading[id] = false;
-        })
+                action.payload && state.data.push(action.payload);
+                state.error = state.error.filter(error => error.id !== id);
+            })
+            .addCase(getPokemon.rejected, (state, action) => {
+                const id = action.meta.arg;
+                state.error.push({ id, error: action.error })
+            })
     }
 })
 
@@ -81,63 +83,52 @@ const pokeIDSlice = createSlice({
     name: 'idList',
     initialState: {
         isLoading: false,
-        data: null,
-        defaultData: null,
-        error: null
+        fetchData: [],
+        compileData: [],
+        error: []
     },
     reducers: {
         resetIdList: (state) => {
-            state.error = null;
-            state.data = null;
-            state.isLoading = true;
+            state.fetchData = [];
+            state.error = [];
         },
         sortPokemon: (state, action) => {
             const { sortMode, sortValue } = action.payload;
-
-            switch (sortMode) {
+            const ascending = sortMode.isAscending
+            switch (sortMode.mode) {
                 case "Name":
-                    state.data = sortValue.sort((a, b) => (a.name || '').localeCompare(b.name || '')).map(p => p.id);
+                    const nameAsc = sortValue.sort((a, b) => (a.name || '').localeCompare(b.name || '')).map(p => p.id);
+                    state.compileData = ascending ? nameAsc : nameAsc.reverse();
                     break;
                 case "Number":
-                    state.data = sortValue.sort((a, b) => (a.id || 0) - (b.id || 0)).map(p => p.id);
+                    const idAsc  = sortValue.sort((a, b) => (a.id || 0) - (b.id || 0)).map(p => p.id);
+                    state.compileData = ascending ? idAsc : idAsc.reverse();
                     break;
                 case "Weight":
-                    state.data = sortValue.sort((a, b) => (a.weight || 0) - (b.weight || 0)).map(p => p.id);
+                    const weightValue  = sortValue.sort((a, b) => (a.weight || 0) - (b.weight || 0)).map(p => p.id);
+                    state.compileData = ascending ? weightValue : weightValue.reverse();
                     break;
             }
         },
     },
     extraReducers: (builder) => {
-        builder.addCase(getPokeID.pending, (state) => {
-            state.isLoading = true;
-            state.error = null;
-        })
-        builder.addCase(getPokeID.fulfilled, (state, action) => {
-            if (action.payload.idList.length === 0) {
-                state.error = null;
+        builder
+            .addCase(getPokeID.pending, (state, action) => {
+                state.isLoading = true;
+            })
+            .addCase(getPokeID.fulfilled, (state, action) => {
+                if (action.payload.length === 0) return;
+                state.fetchData = action.payload;
                 state.isLoading = false;
-                return;
-            }
-
-            if (state.data === null) {
-                state.data = action.payload.idList;
-                state.defaultData = action.payload.idList;
-            }
-
-            if (state.data !== null) state.data = state.data.filter(id => action.payload.idList.includes(id));
-            state.error = null;
-            state.isLoading = false;
-        })
-        builder.addCase(getPokeID.rejected, (state, action) => {
-            state.isLoading = false;
-            if (!state.error) state.error = {};
-            state.error = action.error;
-        })
+            })
+            .addCase(getPokeID.rejected, (state, action) => {
+                const filterValue = action.meta.arg;
+                state.error.push(filterValue);
+                state.isLoading = false;
+            })
     }
 })
 
-
 export const { resetIdList, sortPokemon } = pokeIDSlice.actions;
-export const { resetPokemonList } = pokemonSlice.actions;
 export const pokeIdReducer = pokeIDSlice.reducer;
 export const pokemonReducer = pokemonSlice.reducer;

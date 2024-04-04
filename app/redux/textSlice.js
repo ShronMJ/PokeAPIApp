@@ -4,7 +4,10 @@ const texConfigSlice = createSlice({
     name: "textConfig",
     initialState: {
         search: "",
-        sort: "Number",
+        sort: {
+            isAscending: true,
+            mode: "Number"
+        },
         filter: {
             Type: "",
             Generation: '',
@@ -24,5 +27,5 @@ const texConfigSlice = createSlice({
     }
 })
 
-export const { setSearch, setSort, setFilter } = texConfigSlice.actions; //export apps
-export default texConfigSlice.reducer; //export to store
+export const { setSearch, setSort, setFilter } = texConfigSlice.actions;
+export default texConfigSlice.reducer;

@@ -1,12 +1,11 @@
 import React from 'react'
 import { View, Text } from 'react-native'
-
 import styles from './description.style'
 
 const Description = ({ activeTab, pokemon }) => {
-
+  const {id, name, desc, weight, height, abilities} = pokemon;
   const number = () => {
-    let n = pokemon.id;
+    let n = id;
     switch (true) {
       case n < 10: return "000" + n.toString();
       case n < 100: return "00" + n.toString();
@@ -26,36 +25,35 @@ const Description = ({ activeTab, pokemon }) => {
     <View>
       {activeTab === 'About' && (
         <View style={styles.container}>
-          <Text style={styles.intro}>#{number()} {naming(pokemon.name)}</Text>
+          <Text style={styles.intro}>#{number()} {naming(name)}</Text>
           <View style={styles.contentBox}>
-            <Text style={styles.contextText}>{pokemon.desc}</Text>
+            <Text style={styles.contextText}>{desc}</Text>
           </View>
         </View>)
       }
       {activeTab === 'Description' && (
-        <View style={{...styles.container, flexDirection: "row",}}>
+        <View style={{ ...styles.container, flexDirection: "row", }}>
           <View style={styles.contentBox}>
             <Text style={styles.intro}>Stat</Text>
-            <Text style={{...styles.headText, marginTop: 12}}>Weight: {pokemon.weight}</Text>
-            <Text style={styles.headText }>Height: {pokemon.height}</Text>
+            <Text style={{ ...styles.headText, marginTop: 12 }}>Weight: {weight}</Text>
+            <Text style={styles.headText}>Height: {height}</Text>
           </View>
 
-
-            <View style={styles.contentBox}>
-              <Text style={styles.intro}>Abilities</Text>
-              <View style={styles.pointsContainer}>
-                {pokemon.abilities.map((item, index) => (
-                  <View style={styles.pointWrapper} key={item + index}>
-                    <View style={styles.pointDot}></View>
-                    <Text style={styles.pointText}>{item}</Text>
-                  </View>
-                ))}
-              </View>
+          <View style={styles.contentBox}>
+            <Text style={styles.intro}>Abilities</Text>
+            <View style={styles.pointsContainer}>
+              {abilities.map((item, index) => (
+                <View style={styles.pointWrapper} key={item + index}>
+                  <View style={styles.pointDot}></View>
+                  <Text style={styles.pointText}>{item}</Text>
+                </View>
+              ))}
             </View>
+          </View>
         </View>
       )}
     </View>
   )
 }
 
-      export default Description;
+export default Description;
